@@ -7,6 +7,7 @@ import shutil
 import urllib.request
 from io import StringIO
 
+import pymysql
 from pdfminer.converter import TextConverter
 from pdfminer.layout import LAParams
 from pdfminer.pdfinterp import PDFPageInterpreter
@@ -77,11 +78,44 @@ def parse_text():
 
     dd = int(begin_date[1][0:-2])
     mm = int(month[begin_date[2]])
-    yy = datetime.datetime.now().year + (1 if datetime.datetime.now().month == 12 and mm == '1' else 0)
+    yy = datetime.datetime.now().year
+    if datetime.datetime.now().month == 12 and mm == 1:
+        yy -= 1
+    if datetime.datetime.now().month == 1 and mm == 12:
+        yy += 1
 
-    return datetime.datetime(year=yy, month=mm, day=dd), days
+    date = datetime.datetime(year=yy, month=mm, day=dd)
+
+    i = 0
+    pretty_days = []
+    while i + 1 < len(days):
+        pretty_days.append(dict(Date=date + datetime.timedelta(days=i - 1),
+                                Lunch=days[2 * i],
+                                Dinner=days[2 * i + 1]))
+
+    return pretty_days
+
+
+def update_db(days, host, user, password, dbname):
+    db = pymysql.connect(host, user, password, dbname)
+    cursor = db.cursor()
+    cursor.execute('SELECT TOP 1 date FROM meals ORDER BY DESC;')
+    newest = cursor.fetchone()
+    if newest >= days[0]["Date"]:
+        return
+    try:
+        for entry in days:
+            cursor.execute('INSERT INTO meals(date, lunch, dinner) VALUES(' +
+                           entry["Date"] + ', ' +
+                           entry["Lunch"] + ', ' +
+                           entry["Dinner"] + ');')
+        db.commit()
+    except:
+        db.rollback()
+
+    db.close()
 
 
 if __name__ == '__main__':
     download_file()
-    parse_text()
+    update_db(parse_text(), "localhost", "user", "pass", "menu")
