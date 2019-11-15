@@ -4,6 +4,7 @@
 import datetime
 import re
 import shutil
+import sys
 import urllib.request
 from io import StringIO
 
@@ -19,12 +20,12 @@ pdf_name = 'trin_menu.pdf'
 month = dict(Jan=1, Feb=2, Mar=3, Apr=4, May=5, Jun=6, Jul=7, Aug=8, Sep=9, Oct=10, Nov=11, Dec=12)
 
 
-def download_file():
+def download_file():  # From https://stackoverflow.com/a/7244263
     with urllib.request.urlopen(url) as response, open(pdf_name, 'wb') as out_file:
         shutil.copyfileobj(response, out_file)
 
 
-def extract_text_from_pdf(path):
+def extract_text_from_pdf(path):  # Also from stack-overflow
     rsrcmgr = PDFResourceManager()
     retstr = StringIO()
     codec = 'utf-8'
@@ -76,6 +77,7 @@ def parse_text():
 
     begin_date = begin_date.split()
 
+    # Get first date of the week
     dd = int(begin_date[1][0:-2])
     mm = int(month[begin_date[2]])
     yy = datetime.datetime.now().year
@@ -84,14 +86,16 @@ def parse_text():
     if datetime.datetime.now().month == 1 and mm == 12:
         yy += 1
 
-    date = datetime.datetime(year=yy, month=mm, day=dd)
+    date = datetime.date(year=yy, month=mm, day=dd)
 
+    # Reformat data
     i = 0
     pretty_days = []
-    while i + 1 < len(days):
-        pretty_days.append(dict(Date=date + datetime.timedelta(days=i - 1),
-                                Lunch=days[2 * i],
-                                Dinner=days[2 * i + 1]))
+    while 2 * i + 1 < len(days):
+        pretty_days.append(dict(Date=date + datetime.timedelta(days=i),
+                                Lunch='\n'.join(days[2 * i]),
+                                Dinner='\n'.join(days[2 * i + 1])))
+        i += 1
 
     return pretty_days
 
@@ -99,16 +103,16 @@ def parse_text():
 def update_db(days, host, user, password, dbname):
     db = pymysql.connect(host, user, password, dbname)
     cursor = db.cursor()
-    cursor.execute('SELECT TOP 1 date FROM meals ORDER BY DESC;')
+    cursor.execute('SELECT date FROM meals ORDER BY date DESC LIMIT 1;')
     newest = cursor.fetchone()
-    if newest >= days[0]["Date"]:
+    if newest is not None and newest[0] >= days[0]["Date"]:
         return
     try:
         for entry in days:
-            cursor.execute('INSERT INTO meals(date, lunch, dinner) VALUES(' +
-                           entry["Date"] + ', ' +
-                           entry["Lunch"] + ', ' +
-                           entry["Dinner"] + ');')
+            cursor.execute('INSERT INTO meals(date, lunch, dinner) VALUES("' +
+                           str(entry["Date"]) + '", "' +
+                           entry["Lunch"] + '", "' +
+                           entry["Dinner"] + '");')
         db.commit()
     except:
         db.rollback()
@@ -118,4 +122,4 @@ def update_db(days, host, user, password, dbname):
 
 if __name__ == '__main__':
     download_file()
-    update_db(parse_text(), "localhost", "user", "pass", "menu")
+    update_db(parse_text(), sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
