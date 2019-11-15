@@ -1,1 +1,1 @@
-# Trinity-College-Hall-Menu
+# Trinity College Hall Menu
