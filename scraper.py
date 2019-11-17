@@ -59,7 +59,8 @@ def parse_text():
 
     begin_date = days[0][1]  # Gets first date of the week
 
-    days = [list(filter(lambda s: s.split()[0] != s.split()[0].upper(), d)) for d in days]
+    days = [list(filter(lambda s: re.search("\A(\s*(MON|TUE|WED|THU|SAT|SUN|DIS|SOM|FUR))", s) is None, d)) for d in
+            days]
     # Remove entries like MONDAY, TUESDAY, DISHES MAY CONTAIN...
     days.pop(0)  # Remove first, empty sublist
 
@@ -70,9 +71,10 @@ def parse_text():
     for meal in days:
         i = 0
         while i < len(meal):
-            if meal[i][0].isspace() or (i > 0 and meal[i - 1][0] == '(' and meal[i - 1][-1] != ')'):
+            if meal[i][0:2].isspace() or (i > 0 and meal[i - 1][0] == '(' and meal[i - 1][-1] != ')'):
                 meal[i - 1] += ' ' + meal.pop(i).lstrip()
                 i -= 1
+            meal[i] = meal[i].lstrip();
             i += 1
 
     begin_date = begin_date.split()
