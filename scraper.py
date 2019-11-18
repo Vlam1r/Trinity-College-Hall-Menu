@@ -57,7 +57,7 @@ def parse_text():
     days = list(map(lambda s: s.split('\n'), days))  # Split text into lines
     days = [list(filter(lambda s: not (s.isspace() or s == ''), d)) for d in days]  # Remove empty lines
 
-    begin_date = days[0][1]  # Gets first date of the week
+    begin_date = days[0][2]  # Gets first date of the week
 
     days = [list(filter(lambda s: re.search("\A(\s*(MON|TUE|WED|THU|SAT|SUN|DIS|SOM|FUR))", s) is None, d)) for d in
             days]
@@ -74,14 +74,14 @@ def parse_text():
             if meal[i][0:2].isspace() or (i > 0 and meal[i - 1][0] == '(' and meal[i - 1][-1] != ')'):
                 meal[i - 1] += ' ' + meal.pop(i).lstrip()
                 i -= 1
-            meal[i] = meal[i].lstrip();
+            meal[i] = meal[i].lstrip()
             i += 1
 
     begin_date = begin_date.split()
 
     # Get first date of the week
-    dd = int(begin_date[1][0:-2])
-    mm = int(month[begin_date[2]])
+    dd = int(begin_date[0][0:-2])
+    mm = int(month[begin_date[1][0:3]])
     yy = datetime.datetime.now().year
     if datetime.datetime.now().month == 12 and mm == 1:
         yy -= 1
