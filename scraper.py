@@ -18,6 +18,7 @@ from pdfminer.pdfpage import PDFPage
 url = 'https://www.trin.cam.ac.uk/wp-content/uploads/Hall-Menu-cur.pdf'
 pdf_name = 'trin_menu.pdf'
 month = dict(Jan=1, Feb=2, Mar=3, Apr=4, May=5, Jun=6, Jul=7, Aug=8, Sep=9, Oct=10, Nov=11, Dec=12)
+no_go = "January|February|March|April|May|June|July|August|September|October|November|December|Servery|Dishes|Further"
 
 
 def download_file():  # From https://stackoverflow.com/a/7244263
@@ -76,6 +77,11 @@ def parse_text():
                 i -= 1
             meal[i] = meal[i].lstrip()
             i += 1
+
+    # Add some HTML tags to text
+    days = [list(map(lambda s: "<b>" + s + "</b>" if s[0] != '(' and ':' in s else s, d)) for d in days]
+    # Safety measures
+    days = [list(filter(lambda s: not re.search(no_go, s), d)) for d in days]
 
     begin_date = begin_date.split()
 
